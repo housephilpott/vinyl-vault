@@ -22,7 +22,8 @@
       --shadow:     0 4px 20px rgba(0,0,0,.4);
     }
 
-    body {
+    /* FIX 3: prevent body-level horizontal scroll */
+    html, body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg-dark);
       color: var(--text);
@@ -55,6 +56,7 @@
       max-width: 960px;
       margin: 0 auto;
       padding: 20px 16px 60px;
+      overflow-x: hidden;          /* FIX 3 */
     }
     .view.active { display: block; }
     .view.visible { opacity: 1; }
@@ -124,7 +126,7 @@
     .search-bar:focus { border-color: var(--accent); }
 
     /* ===== TABLE ===== */
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { overflow-x: auto; max-width: 100%; }   /* FIX 3 */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -354,7 +356,7 @@
     /* ===========================================================
        CONFIGURATION — paste your deployed Apps Script URL below
        =========================================================== */
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzKHdMXbniNbfimCsTa02N5VhJbn3WeQqtN0D0VQCKRtRICezqHtq0NnmXU6363VAEjKg/exec';
+    const API_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
 
     /* ===== STATE ===== */
     let ownedData  = [];
@@ -428,6 +430,12 @@
         (r.Genre||'').toLowerCase().includes(query)
       );
 
+      /* FIX 1: Sort alphabetically by Artist, then Title */
+      filtered.sort((a, b) => {
+        const artistCmp = (a.Artist||'').localeCompare(b.Artist||'', undefined, { sensitivity: 'base' });
+        return artistCmp !== 0 ? artistCmp : (a.Title||'').localeCompare(b.Title||'', undefined, { sensitivity: 'base' });
+      });
+
       if (!filtered.length) {
         container.innerHTML = `<div class="empty-msg">${data.length ? 'No matching records.' : 'No records yet — go add some!'}</div>`;
         return;
@@ -471,7 +479,8 @@
     async function moveToOwned(row) {
       if (!confirm('Move this record to your collection?')) return;
       try {
-        await apiPost({ action: 'moveToOwned', row });
+        /* FIX 2: send current year as Year of Purchase */
+        await apiPost({ action: 'moveToOwned', row, yearOfPurchase: new Date().getFullYear() });
         toast('✅ Moved to collection!');
         openList('want');
       } catch { toast('⚠️ Error moving record.'); }
