@@ -18,6 +18,7 @@
       --text-muted: #888;
       --danger:     #e04040;
       --success:    #40b060;
+      --info:       #3a8fd4;
       --radius:     10px;
       --shadow:     0 4px 20px rgba(0,0,0,.4);
     }
@@ -53,7 +54,7 @@
       display: none;
       opacity: 0;
       transition: opacity .3s ease;
-      max-width: 960px;
+      max-width: 1060px;
       margin: 0 auto;
       padding: 20px 16px 60px;
       overflow-x: hidden;
@@ -88,6 +89,11 @@
     }
     .home-btn .icon { font-size: 2.8rem; margin-bottom: 12px; }
     .home-btn .label { font-size: 1.15rem; font-weight: 600; }
+    .home-btn .count {
+      font-size: .85rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
 
     /* ===== BACK BUTTON ===== */
     .back-btn {
@@ -156,6 +162,27 @@
       font-size: 1rem;
     }
 
+    /* ===== ALBUM ART THUMBNAIL ===== */
+    .art-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      display: block;
+    }
+    .art-placeholder {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      background: var(--bg-input);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
     /* ===== ACTION BUTTONS (in-table) ===== */
     .btn-sm {
       padding: 5px 12px;
@@ -166,9 +193,12 @@
       font-weight: 600;
       transition: opacity .2s;
       white-space: nowrap;
+      margin-right: 4px;
+      margin-bottom: 2px;
     }
     .btn-sm:hover { opacity: .8; }
-    .btn-move  { background: var(--success); color: #fff; margin-right: 4px; }
+    .btn-move  { background: var(--success); color: #fff; }
+    .btn-edit  { background: var(--accent); color: #121212; }
     .btn-del   { background: var(--danger); color: #fff; }
 
     /* ===== FORM ===== */
@@ -215,6 +245,53 @@
     }
     .submit-btn:hover { background: var(--accent-dim); }
 
+    /* ===== MODAL OVERLAY ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 900;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--bg-input);
+      border-radius: 12px;
+      padding: 28px 24px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,.6);
+    }
+    .modal h2 {
+      font-size: 1.3rem;
+      color: var(--accent);
+      margin-bottom: 18px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-cancel {
+      padding: 10px 24px;
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border: 1px solid var(--text-muted);
+      border-radius: 6px;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .modal-cancel:hover { color: var(--text); border-color: var(--text); }
+
     /* ===== SPINNER / TOAST ===== */
     .spinner {
       text-align: center;
@@ -260,6 +337,7 @@
       .form-grid { grid-template-columns: 1fr; }
       header h1 { font-size: 1.8rem; }
       .home-btn { padding: 28px 16px; }
+      .modal { padding: 20px 16px; }
     }
   </style>
 </head>
@@ -277,10 +355,12 @@
       <div class="home-btn" onclick="openList('owned')">
         <div class="icon">💿</div>
         <div class="label">My Collection</div>
+        <div class="count" id="count-owned">Loading…</div>
       </div>
       <div class="home-btn" onclick="openList('want')">
         <div class="icon">🛒</div>
         <div class="label">Want List</div>
+        <div class="count" id="count-want">Loading…</div>
       </div>
       <div class="home-btn" onclick="showView('add')">
         <div class="icon">➕</div>
@@ -311,7 +391,6 @@
     <h2 class="view-title">➕ Add a Record</h2>
     <form id="add-form" onsubmit="submitRecord(event)">
       <div class="form-grid">
-
         <div class="form-group">
           <label for="f-artist">Artist</label>
           <input type="text" id="f-artist" required />
@@ -343,10 +422,58 @@
           <label for="f-genre">Genre (hold Ctrl / Cmd to select multiple)</label>
           <select id="f-genre" multiple></select>
         </div>
-
+        <div class="form-group full">
+          <label for="f-art">Cover Art URL (optional)</label>
+          <input type="url" id="f-art" placeholder="https://example.com/album-cover.jpg" />
+        </div>
       </div>
       <button type="submit" class="submit-btn">Add Record</button>
     </form>
+  </div>
+
+  <!-- ===== EDIT MODAL ===== -->
+  <div class="modal-overlay" id="edit-overlay" onclick="if(event.target===this)closeEditModal()">
+    <div class="modal">
+      <h2>✏️ Edit Record</h2>
+      <form id="edit-form" onsubmit="saveEdit(event)">
+        <input type="hidden" id="e-list" />
+        <input type="hidden" id="e-row" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="e-artist">Artist</label>
+            <input type="text" id="e-artist" required />
+          </div>
+          <div class="form-group">
+            <label for="e-title">Title</label>
+            <input type="text" id="e-title" required />
+          </div>
+          <div class="form-group">
+            <label for="e-version">Version</label>
+            <input type="text" id="e-version" />
+          </div>
+          <div class="form-group">
+            <label for="e-year-release">Year of Release</label>
+            <input type="number" id="e-year-release" min="1900" max="2099" required />
+          </div>
+          <div class="form-group">
+            <label for="e-year-purchase">Year of Purchase</label>
+            <input type="number" id="e-year-purchase" min="1900" max="2099" />
+          </div>
+          <div class="form-group full">
+            <label for="e-genre">Genre (hold Ctrl / Cmd to select multiple)</label>
+            <select id="e-genre" multiple></select>
+          </div>
+          <div class="form-group full">
+            <label for="e-art">Cover Art URL (optional)</label>
+            <input type="url" id="e-art" placeholder="https://example.com/album-cover.jpg" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="submit-btn">Save Changes</button>
+          <button type="button" class="modal-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- TOAST -->
@@ -362,6 +489,7 @@
     let ownedData  = [];
     let wantData   = [];
     let genresList = [];
+    let currentListType = null;  // tracks which list view is open (for refresh after edit)
 
     /* ===== VIEW NAVIGATION ===== */
     function showView(id) {
@@ -374,6 +502,7 @@
         el.classList.add('active');
         requestAnimationFrame(() => el.classList.add('visible'));
       }, 300);
+      if (id === 'home') loadCounts();
     }
 
     /* ===== TOAST NOTIFICATION ===== */
@@ -400,8 +529,28 @@
       return res.json();
     }
 
+    /* ===== RECORD COUNTS ON HOME SCREEN ===== */
+    async function loadCounts() {
+      try {
+        const [ownedJson, wantJson] = await Promise.all([
+          apiGet('getOwned'),
+          apiGet('getWantToBuy')
+        ]);
+        ownedData = ownedJson.data || [];
+        wantData  = wantJson.data  || [];
+        document.getElementById('count-owned').textContent =
+          ownedData.length === 1 ? '1 record' : ownedData.length + ' records';
+        document.getElementById('count-want').textContent =
+          wantData.length === 1 ? '1 record' : wantData.length + ' records';
+      } catch {
+        document.getElementById('count-owned').textContent = '—';
+        document.getElementById('count-want').textContent  = '—';
+      }
+    }
+
     /* ===== OPEN A LIST VIEW ===== */
     async function openList(type) {
+      currentListType = type;
       showView(type);
       const container = document.getElementById(`table-${type}`);
       container.innerHTML = '<div class="spinner">Loading</div>';
@@ -441,14 +590,22 @@
         return;
       }
 
+      const listName = type === 'owned' ? 'Owned' : 'WantToBuy';
+
       let html = `<table>
         <thead><tr>
-          <th>Artist</th><th>Title</th><th>Version</th>
+          <th></th><th>Artist</th><th>Title</th><th>Version</th>
           <th>Released</th><th>Purchased</th><th>Genre</th><th></th>
         </tr></thead><tbody>`;
 
       filtered.forEach(r => {
+        const artUrl = (r.CoverArtUrl || '').trim();
+        const artHtml = artUrl
+          ? `<img class="art-thumb" src="${esc(artUrl)}" alt="Cover" onerror="this.outerHTML='<div class=\\'art-placeholder\\'>🎵</div>'" />`
+          : `<div class="art-placeholder">🎵</div>`;
+
         html += `<tr>
+          <td>${artHtml}</td>
           <td>${esc(r.Artist)}</td>
           <td>${esc(r.Title)}</td>
           <td>${esc(r.Version)}</td>
@@ -457,6 +614,7 @@
           <td>${esc(r.Genre)}</td>
           <td style="white-space:nowrap">
             ${type === 'want' ? `<button class="btn-sm btn-move" onclick="moveToOwned(${r._row})">Move to Collection</button>` : ''}
+            <button class="btn-sm btn-edit" onclick='openEditModal(${JSON.stringify(listName)}, ${JSON.stringify(r)})'>Edit</button>
             <button class="btn-sm btn-del" onclick="deleteRecord('${type}', ${r._row})">Delete</button>
           </td>
         </tr>`;
@@ -511,7 +669,8 @@
         version:         document.getElementById('f-version').value.trim(),
         yearOfRelease:   document.getElementById('f-year-release').value,
         yearOfPurchase:  document.getElementById('f-year-purchase').value,
-        genre:           genres
+        genre:           genres,
+        coverArtUrl:     document.getElementById('f-art').value.trim()
       };
 
       try {
@@ -521,24 +680,81 @@
       } catch { toast('⚠️ Error adding record.'); }
     }
 
+    /* ===== EDIT MODAL ===== */
+    function openEditModal(listName, record) {
+      document.getElementById('e-list').value         = listName;
+      document.getElementById('e-row').value          = record._row;
+      document.getElementById('e-artist').value       = record.Artist || '';
+      document.getElementById('e-title').value        = record.Title || '';
+      document.getElementById('e-version').value      = record.Version || '';
+      document.getElementById('e-year-release').value = record.YearOfRelease || '';
+      document.getElementById('e-year-purchase').value= record.YearOfPurchase || '';
+      document.getElementById('e-art').value          = record.CoverArtUrl || '';
+
+      // Set genre selections
+      const sel = document.getElementById('e-genre');
+      const recordGenres = (record.Genre || '').split(',').map(g => g.trim().toLowerCase());
+      Array.from(sel.options).forEach(opt => {
+        opt.selected = recordGenres.includes(opt.value.toLowerCase());
+      });
+
+      document.getElementById('edit-overlay').classList.add('open');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-overlay').classList.remove('open');
+    }
+
+    async function saveEdit(e) {
+      e.preventDefault();
+      const genreSel = document.getElementById('e-genre');
+      const genres = Array.from(genreSel.selectedOptions).map(o => o.value).join(', ');
+
+      const payload = {
+        action:          'updateRecord',
+        list:            document.getElementById('e-list').value,
+        row:             parseInt(document.getElementById('e-row').value, 10),
+        artist:          document.getElementById('e-artist').value.trim(),
+        title:           document.getElementById('e-title').value.trim(),
+        version:         document.getElementById('e-version').value.trim(),
+        yearOfRelease:   document.getElementById('e-year-release').value,
+        yearOfPurchase:  document.getElementById('e-year-purchase').value,
+        genre:           genres,
+        coverArtUrl:     document.getElementById('e-art').value.trim()
+      };
+
+      try {
+        await apiPost(payload);
+        toast('✅ Record updated!');
+        closeEditModal();
+        if (currentListType) openList(currentListType);
+      } catch { toast('⚠️ Error updating record.'); }
+    }
+
     /* ===== LOAD GENRES ON STARTUP ===== */
     async function loadGenres() {
       try {
         const json = await apiGet('getGenres');
         genresList = json.data || [];
-        const sel = document.getElementById('f-genre');
-        sel.innerHTML = '';
-        genresList.forEach(g => {
-          const opt = document.createElement('option');
-          opt.value = g;
-          opt.textContent = g;
-          sel.appendChild(opt);
-        });
+        populateGenreSelect('f-genre');
+        populateGenreSelect('e-genre');
       } catch { /* genres will be empty until API is connected */ }
+    }
+
+    function populateGenreSelect(selectId) {
+      const sel = document.getElementById(selectId);
+      sel.innerHTML = '';
+      genresList.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        sel.appendChild(opt);
+      });
     }
 
     // Initialise
     loadGenres();
+    loadCounts();
   </script>
 </body>
 </html>
