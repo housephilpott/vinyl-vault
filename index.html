@@ -22,7 +22,7 @@
       --shadow:     0 4px 20px rgba(0,0,0,.4);
     }
 
-    /* FIX 3: prevent body-level horizontal scroll */
+    /* Prevent body-level horizontal scroll */
     html, body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg-dark);
@@ -56,7 +56,7 @@
       max-width: 960px;
       margin: 0 auto;
       padding: 20px 16px 60px;
-      overflow-x: hidden;          /* FIX 3 */
+      overflow-x: hidden;
     }
     .view.active { display: block; }
     .view.visible { opacity: 1; }
@@ -126,7 +126,7 @@
     .search-bar:focus { border-color: var(--accent); }
 
     /* ===== TABLE ===== */
-    .table-wrap { overflow-x: auto; max-width: 100%; }   /* FIX 3 */
+    .table-wrap { overflow-x: auto; max-width: 100%; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -275,7 +275,7 @@
   <div id="home" class="view active visible">
     <div class="home-grid">
       <div class="home-btn" onclick="openList('owned')">
-        <div class="icon">📀</div>
+        <div class="icon">💿</div>
         <div class="label">My Collection</div>
       </div>
       <div class="home-btn" onclick="openList('want')">
@@ -292,7 +292,7 @@
   <!-- ===== OWNED LIST VIEW ===== -->
   <div id="owned" class="view">
     <button class="back-btn" onclick="showView('home')">← Back</button>
-    <h2 class="view-title">📀 My Collection</h2>
+    <h2 class="view-title">💿 My Collection</h2>
     <input class="search-bar" id="search-owned" placeholder="Search by artist, title, genre…" oninput="filterTable('owned')" />
     <div class="table-wrap" id="table-owned"></div>
   </div>
@@ -354,7 +354,7 @@
 
   <script>
     /* ===========================================================
-       CONFIGURATION — paste your deployed Apps Script URL below
+       CONFIGURATION — your deployed Apps Script web app URL
        =========================================================== */
     const API_URL = 'https://script.google.com/macros/s/AKfycbzKHdMXbniNbfimCsTa02N5VhJbn3WeQqtN0D0VQCKRtRICezqHtq0NnmXU6363VAEjKg/exec';
 
@@ -430,7 +430,7 @@
         (r.Genre||'').toLowerCase().includes(query)
       );
 
-      /* FIX 1: Sort alphabetically by Artist, then Title */
+      /* Sort alphabetically by Artist, then Title */
       filtered.sort((a, b) => {
         const artistCmp = (a.Artist||'').localeCompare(b.Artist||'', undefined, { sensitivity: 'base' });
         return artistCmp !== 0 ? artistCmp : (a.Title||'').localeCompare(b.Title||'', undefined, { sensitivity: 'base' });
@@ -479,7 +479,7 @@
     async function moveToOwned(row) {
       if (!confirm('Move this record to your collection?')) return;
       try {
-        /* FIX 2: send current year as Year of Purchase */
+        /* Send current year as Year of Purchase */
         await apiPost({ action: 'moveToOwned', row, yearOfPurchase: new Date().getFullYear() });
         toast('✅ Moved to collection!');
         openList('want');
