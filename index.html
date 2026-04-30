@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎵 Vinyl Vault</title>
+  <style>
+    /* ===== CSS RESET & VARIABLES ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark:    #121212;
+      --bg-card:    #1e1e1e;
+      --bg-input:   #2a2a2a;
+      --accent:     #e8a030;
+      --accent-dim: #c47f1a;
+      --text:       #e0e0e0;
+      --text-muted: #888;
+      --danger:     #e04040;
+      --success:    #40b060;
+      --radius:     10px;
+      --shadow:     0 4px 20px rgba(0,0,0,.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      text-align: center;
+      padding: 30px 16px 10px;
+      cursor: pointer;
+    }
+    header h1 {
+      font-size: 2.4rem;
+      letter-spacing: 2px;
+      color: var(--accent);
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: .95rem;
+      margin-top: 4px;
+    }
+
+    /* ===== VIEWS (fade transition) ===== */
+    .view {
+      display: none;
+      opacity: 0;
+      transition: opacity .3s ease;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+    .view.active { display: block; }
+    .view.visible { opacity: 1; }
+
+    /* ===== HOME BUTTONS ===== */
+    .home-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+    .home-btn {
+      flex: 1 1 250px;
+      max-width: 280px;
+      background: var(--bg-card);
+      border: 2px solid var(--bg-input);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      box-shadow: var(--shadow);
+    }
+    .home-btn:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(232,160,48,.15);
+    }
+    .home-btn .icon { font-size: 2.8rem; margin-bottom: 12px; }
+    .home-btn .label { font-size: 1.15rem; font-weight: 600; }
+
+    /* ===== BACK BUTTON ===== */
+    .back-btn {
+      background: none;
+      border: 1px solid var(--text-muted);
+      color: var(--text-muted);
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .85rem;
+      transition: color .2s, border-color .2s;
+      margin-bottom: 18px;
+    }
+    .back-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ===== SECTION TITLES ===== */
+    .view-title {
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+
+    /* ===== SEARCH BAR ===== */
+    .search-bar {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--bg-input);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: .95rem;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-bar:focus { border-color: var(--accent); }
+
+    /* ===== TABLE ===== */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    thead th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      color: var(--accent);
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #2a2a2a;
+      vertical-align: middle;
+    }
+    tbody tr { transition: background .15s; }
+    tbody tr:hover { background: rgba(232,160,48,.06); }
+
+    .empty-msg {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* ===== ACTION BUTTONS (in-table) ===== */
+    .btn-sm {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: .8rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity .2s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { opacity: .8; }
+    .btn-move  { background: var(--success); color: #fff; margin-right: 4px; }
+    .btn-del   { background: var(--danger); color: #fff; }
+
+    /* ===== FORM ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: .85rem;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+    .form-group input,
+    .form-group select {
+      padding: 10px 12px;
+      border: 1px solid var(--bg-input);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: var(--accent); }
+    .form-group select[multiple] { min-height: 120px; }
+    .form-group select option { padding: 4px 8px; }
+    .form-group select option:checked { background: var(--accent-dim); color: #fff; }
+
+    .submit-btn {
+      margin-top: 20px;
+      padding: 12px 36px;
+      background: var(--accent);
+      color: #121212;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .submit-btn:hover { background: var(--accent-dim); }
+
+    /* ===== SPINNER / TOAST ===== */
+    .spinner {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    .spinner::after {
+      content: '';
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 3px solid var(--text-muted);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-left: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--accent);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: .9rem;
+      opacity: 0;
+      transition: transform .35s, opacity .35s;
+      z-index: 999;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      header h1 { font-size: 1.8rem; }
+      .home-btn { padding: 28px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER (click to go home) -->
+  <header onclick="showView('home')">
+    <h1>🎵 Vinyl Vault</h1>
+    <p>Your personal record collection tracker</p>
+  </header>
+
+  <!-- ===== HOME VIEW ===== -->
+  <div id="home" class="view active visible">
+    <div class="home-grid">
+      <div class="home-btn" onclick="openList('owned')">
+        <div class="icon">📀</div>
+        <div class="label">My Collection</div>
+      </div>
+      <div class="home-btn" onclick="openList('want')">
+        <div class="icon">🛒</div>
+        <div class="label">Want List</div>
+      </div>
+      <div class="home-btn" onclick="showView('add')">
+        <div class="icon">➕</div>
+        <div class="label">Add Record</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OWNED LIST VIEW ===== -->
+  <div id="owned" class="view">
+    <button class="back-btn" onclick="showView('home')">← Back</button>
+    <h2 class="view-title">📀 My Collection</h2>
+    <input class="search-bar" id="search-owned" placeholder="Search by artist, title, genre…" oninput="filterTable('owned')" />
+    <div class="table-wrap" id="table-owned"></div>
+  </div>
+
+  <!-- ===== WANT LIST VIEW ===== -->
+  <div id="want" class="view">
+    <button class="back-btn" onclick="showView('home')">← Back</button>
+    <h2 class="view-title">🛒 Want List</h2>
+    <input class="search-bar" id="search-want" placeholder="Search by artist, title, genre…" oninput="filterTable('want')" />
+    <div class="table-wrap" id="table-want"></div>
+  </div>
+
+  <!-- ===== ADD RECORD VIEW ===== -->
+  <div id="add" class="view">
+    <button class="back-btn" onclick="showView('home')">← Back</button>
+    <h2 class="view-title">➕ Add a Record</h2>
+    <form id="add-form" onsubmit="submitRecord(event)">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="f-artist">Artist</label>
+          <input type="text" id="f-artist" required />
+        </div>
+        <div class="form-group">
+          <label for="f-title">Title</label>
+          <input type="text" id="f-title" required />
+        </div>
+        <div class="form-group">
+          <label for="f-version">Version</label>
+          <input type="text" id="f-version" placeholder="e.g. Remastered, 180g, First Press" />
+        </div>
+        <div class="form-group">
+          <label for="f-year-release">Year of Release</label>
+          <input type="number" id="f-year-release" min="1900" max="2099" required />
+        </div>
+        <div class="form-group">
+          <label for="f-year-purchase">Year of Purchase</label>
+          <input type="number" id="f-year-purchase" min="1900" max="2099" />
+        </div>
+        <div class="form-group">
+          <label for="f-list">Add to</label>
+          <select id="f-list">
+            <option value="Owned">My Collection (Owned)</option>
+            <option value="WantToBuy">Want List</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label for="f-genre">Genre (hold Ctrl / Cmd to select multiple)</label>
+          <select id="f-genre" multiple></select>
+        </div>
+
+      </div>
+      <button type="submit" class="submit-btn">Add Record</button>
+    </form>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <script>
+    /* ===========================================================
+       CONFIGURATION — paste your deployed Apps Script URL below
+       =========================================================== */
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzKHdMXbniNbfimCsTa02N5VhJbn3WeQqtN0D0VQCKRtRICezqHtq0NnmXU6363VAEjKg/exec';
+
+    /* ===== STATE ===== */
+    let ownedData  = [];
+    let wantData   = [];
+    let genresList = [];
+
+    /* ===== VIEW NAVIGATION ===== */
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(v => {
+        v.classList.remove('visible');
+        setTimeout(() => v.classList.remove('active'), 300);
+      });
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        el.classList.add('active');
+        requestAnimationFrame(() => el.classList.add('visible'));
+      }, 300);
+    }
+
+    /* ===== TOAST NOTIFICATION ===== */
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    /* ===== API HELPERS ===== */
+    async function apiGet(action) {
+      const res = await fetch(`${API_URL}?action=${action}`, { redirect: 'follow' });
+      return res.json();
+    }
+
+    async function apiPost(payload) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return res.json();
+    }
+
+    /* ===== OPEN A LIST VIEW ===== */
+    async function openList(type) {
+      showView(type);
+      const container = document.getElementById(`table-${type}`);
+      container.innerHTML = '<div class="spinner">Loading</div>';
+
+      try {
+        const action = type === 'owned' ? 'getOwned' : 'getWantToBuy';
+        const json   = await apiGet(action);
+        if (type === 'owned') ownedData = json.data || [];
+        else                  wantData  = json.data || [];
+        renderTable(type);
+      } catch (e) {
+        container.innerHTML = '<div class="empty-msg">⚠️ Could not load data. Check your API URL.</div>';
+      }
+    }
+
+    /* ===== RENDER TABLE ===== */
+    function renderTable(type) {
+      const data = type === 'owned' ? ownedData : wantData;
+      const container = document.getElementById(`table-${type}`);
+      const query = (document.getElementById(`search-${type}`)?.value || '').toLowerCase();
+
+      const filtered = data.filter(r =>
+        !query ||
+        (r.Artist||'').toLowerCase().includes(query) ||
+        (r.Title||'').toLowerCase().includes(query) ||
+        (r.Genre||'').toLowerCase().includes(query)
+      );
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="empty-msg">${data.length ? 'No matching records.' : 'No records yet — go add some!'}</div>`;
+        return;
+      }
+
+      let html = `<table>
+        <thead><tr>
+          <th>Artist</th><th>Title</th><th>Version</th>
+          <th>Released</th><th>Purchased</th><th>Genre</th><th></th>
+        </tr></thead><tbody>`;
+
+      filtered.forEach(r => {
+        html += `<tr>
+          <td>${esc(r.Artist)}</td>
+          <td>${esc(r.Title)}</td>
+          <td>${esc(r.Version)}</td>
+          <td>${esc(r.YearOfRelease)}</td>
+          <td>${esc(r.YearOfPurchase)}</td>
+          <td>${esc(r.Genre)}</td>
+          <td style="white-space:nowrap">
+            ${type === 'want' ? `<button class="btn-sm btn-move" onclick="moveToOwned(${r._row})">Move to Collection</button>` : ''}
+            <button class="btn-sm btn-del" onclick="deleteRecord('${type}', ${r._row})">Delete</button>
+          </td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function esc(v) {
+      if (v === undefined || v === null) return '';
+      const d = document.createElement('div');
+      d.textContent = String(v);
+      return d.innerHTML;
+    }
+
+    function filterTable(type) { renderTable(type); }
+
+    /* ===== MOVE TO OWNED ===== */
+    async function moveToOwned(row) {
+      if (!confirm('Move this record to your collection?')) return;
+      try {
+        await apiPost({ action: 'moveToOwned', row });
+        toast('✅ Moved to collection!');
+        openList('want');
+      } catch { toast('⚠️ Error moving record.'); }
+    }
+
+    /* ===== DELETE RECORD ===== */
+    async function deleteRecord(type, row) {
+      if (!confirm('Delete this record?')) return;
+      const list = type === 'owned' ? 'Owned' : 'WantToBuy';
+      try {
+        await apiPost({ action: 'deleteRecord', list, row });
+        toast('🗑️ Record deleted.');
+        openList(type);
+      } catch { toast('⚠️ Error deleting record.'); }
+    }
+
+    /* ===== ADD RECORD ===== */
+    async function submitRecord(e) {
+      e.preventDefault();
+      const genreSel = document.getElementById('f-genre');
+      const genres = Array.from(genreSel.selectedOptions).map(o => o.value).join(', ');
+
+      const payload = {
+        action:          'addRecord',
+        list:            document.getElementById('f-list').value,
+        artist:          document.getElementById('f-artist').value.trim(),
+        title:           document.getElementById('f-title').value.trim(),
+        version:         document.getElementById('f-version').value.trim(),
+        yearOfRelease:   document.getElementById('f-year-release').value,
+        yearOfPurchase:  document.getElementById('f-year-purchase').value,
+        genre:           genres
+      };
+
+      try {
+        await apiPost(payload);
+        toast('🎉 Record added!');
+        document.getElementById('add-form').reset();
+      } catch { toast('⚠️ Error adding record.'); }
+    }
+
+    /* ===== LOAD GENRES ON STARTUP ===== */
+    async function loadGenres() {
+      try {
+        const json = await apiGet('getGenres');
+        genresList = json.data || [];
+        const sel = document.getElementById('f-genre');
+        sel.innerHTML = '';
+        genresList.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          opt.textContent = g;
+          sel.appendChild(opt);
+        });
+      } catch { /* genres will be empty until API is connected */ }
+    }
+
+    // Initialise
+    loadGenres();
+  </script>
+</body>
+</html>
